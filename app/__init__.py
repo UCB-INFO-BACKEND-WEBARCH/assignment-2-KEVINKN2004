@@ -19,6 +19,8 @@ def create_app():
 
     from app import models
     from app.routes.tasks import tasks_bp
+    from app.routes.categories import categories_bp
+    app.register_blueprint(categories_bp)
     app.register_blueprint(tasks_bp)
 
     return app
