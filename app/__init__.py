@@ -1,4 +1,6 @@
 import os
+from redis import Redis
+from rq import Queue
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
@@ -8,6 +10,8 @@ load_dotenv()
 
 db = SQLAlchemy()
 migrate = Migrate()
+redis_conn = Redis.from_url(os.getenv("REDIS_URL", "redis://localhost:6379"))
+task_queue = Queue("default", connection=redis_conn)
 
 def create_app():
     app = Flask(__name__)

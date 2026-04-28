@@ -1,9 +1,10 @@
 from flask import Blueprint, jsonify, request
 from marshmallow import ValidationError
-from app import db
+from app import db, task_queue
 from app.models import Task, Category
 from app.schemas import TaskSchema, TaskUpdateSchema
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
+from app.jobs import due_date_notif
 
 tasks_bp = Blueprint("tasks", __name__)
 
@@ -66,7 +67,15 @@ def create_task():
     db.session.add(task)
     db.session.commit()
 
-    return jsonify({"task": dict_task(task), "notification_queued": False}), 201
+    notification_queued = False
+    if task.due_date is not None:
+        now = datetime.now(timezone.utc)
+        due = task.due_date if task.due_date.tzinfo else task.due_date.replace(tzinfo=timezone.utc)
+        if now < due <= now + timedelta(hours=24):
+            task_queue.enqueue(due_date_notif, task.title)
+            notification_queued = True
+
+    return jsonify({"task": dict_task(task), "notification_queued": notification_queued}), 201
 
 @tasks_bp.put("/tasks/<int:task_id>")
 def update_task(task_id):
