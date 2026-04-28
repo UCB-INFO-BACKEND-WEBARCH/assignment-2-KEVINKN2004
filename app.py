@@ -1,8 +1,14 @@
 import os
 from flask import Flask, request, jsonify
 from datetime import datetime, timezone
+from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
 
 app = Flask(__name__)
+
+app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite://app.db"
+db = SQLAlchemy(app)
+migrate = Migrate(app, db)
 
 tasks = {}
 next_id = 1
@@ -77,34 +83,6 @@ def get_categories(categories_id):
     if not category:
         return jsonify({"error": "Category not found"}), 404
     return jsonify(category), 200
-
-@app.post('/categories')
-def create_task():
-    global next_id
-    data = request.get_json()
-    if not data or not data.get("title"):
-        return jsonify({"error": "Title is required"}), 400
-    if not data.get("title").strip():
-        return jsonify({"error": "Title is required"}), 400
-    
-    category = {
-        "name": data["name"],
-        "color": data["color"],
-    }
-
-    task = {
-        "id": next_id,
-        "title": data["title"],
-        "description": data.get("description"),
-        "completed": False,
-        "due_date": (timezone.utc).isoformat().replace('+00:00', 'Z'),
-        "category_id" : data.get("category"),
-        "category": data.get("id"),
-        "created_at": datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z')
-    }
-    tasks[next_id] = task
-    next_id += 1
-    return jsonify(task), 201
 
 @app.put('/categories/<int:category_id>')
 def update_categories(task_id):
