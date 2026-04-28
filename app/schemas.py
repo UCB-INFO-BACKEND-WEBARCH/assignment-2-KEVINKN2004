@@ -20,6 +20,13 @@ class TaskSchema(Schema):
     due_date = fields.DateTime(required=False, allow_none=True)
     category_id = fields.Integer(required=False, allow_none=True)
 
+    @validates("category_id")
+    def validate_category_exists(self, value, **kwargs):
+        if value is None:
+            return
+        if Category.query.get(value) is None:
+            raise ValidationError("Category does not exist.")
+
 class TaskUpdateSchema(Schema):
     title = fields.String(
         required=False,
@@ -35,6 +42,13 @@ class TaskUpdateSchema(Schema):
     completed = fields.Boolean(required=False)
     due_date = fields.DateTime(required=False, allow_none=True)
     category_id = fields.Integer(required=False, allow_none=True)
+
+    @validates("category_id")
+    def validate_category_exists(self, value, **kwargs):
+        if value is None:
+            return
+        if Category.query.get(value) is None:
+            raise ValidationError("Category does not exist.")
 
 class CategorySchema(Schema):
     name = fields.String(
