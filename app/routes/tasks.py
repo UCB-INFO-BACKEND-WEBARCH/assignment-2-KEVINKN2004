@@ -1,6 +1,8 @@
 from flask import Blueprint, jsonify, request
+from marshmallow import ValidationError
 from app import db
 from app.models import Task, Category
+from app.schemas import TaskSchema, TaskUpdateSchema
 from datetime import datetime
 
 tasks_bp = Blueprint("tasks", __name__)
@@ -48,15 +50,16 @@ def get_task(task_id):
 
 @tasks_bp.post("/tasks")
 def create_task():
-    data = request.get_json()
-    due_date = None
-    if data.get("due_date"):
-        due_date = datetime.fromisoformat(data["due_date"].replace("Z", "+00:00"))
+    schema = TaskSchema()
+    try:
+        data = schema.load(request.get_json() or {})
+    except ValidationError as error:
+        return jsonify({"errors": error.messages}), 400
 
     task = Task(
         title=data.get("title"),
         description=data.get("description"),
-        due_date=due_date,
+        due_date=data.get("due_date"),
         category_id=data.get("category_id")
     )
 
@@ -71,21 +74,15 @@ def update_task(task_id):
     if task is None:
         return jsonify({"error": "Task not found"}), 404
     
-    data = request.get_json()
+    schema = TaskUpdateSchema()
+    try:
+        data = schema.load(request.get_json() or {})
+    except ValidationError as error:
+        return jsonify({"errors": error.messages}), 400
 
-    if "title" in data:
-        task.title = data["title"]
-    if "description" in data:
-        task.description = data["description"]
-    if "completed" in data:
-        task.completed = data["completed"]
-    if "category_id" in data:
-        task.category_id = data["category_id"]
-    if "due_date" in data:
-        if data["due_date"]:
-            task.due_date = datetime.fromisoformat(data["due_date"].replace("Z", "+00:00"))
-        else:
-            task.due_date = None
+    for field in ("title", "description", "completed", "due_date", "category_id"):
+        if field in data:
+            setattr(task, field, data[field])
     
     db.session.commit()
     return jsonify(dict_task(task)), 200

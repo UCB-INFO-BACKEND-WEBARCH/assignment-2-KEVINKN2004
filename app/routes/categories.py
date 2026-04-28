@@ -2,6 +2,8 @@ from flask import Blueprint, jsonify, request
 from app import db
 from app.models import Task, Category
 from datetime import datetime
+from app.schemas import CategorySchema
+from marshmallow import ValidationError
 
 categories_bp = Blueprint("categories", __name__)
 
@@ -39,7 +41,11 @@ def get_category(category_id):
 
 @categories_bp.post("/categories")
 def create_category():
-    data = request.get_json()
+    schema = CategorySchema()
+    try:
+        data = schema.load(request.get_json() or {})
+    except ValidationError as error:
+        return jsonify({"errors": error.messages}), 400
 
     category = Category(
         name=data.get("name"),
